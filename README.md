@@ -227,7 +227,14 @@ for line in sock.makefile():
     print(snapshot["targets"], snapshot.get("vitals"), snapshot["presence"])
 ```
 
-The JSON format is compatible with [radar-dash](https://github.com/duramson/radar-dash) — a sensor-agnostic web frontend.
+The JSON format is compatible with [radar-dash](https://github.com/duramson/radar-dash) — a sensor-agnostic web frontend that works with any daemon emitting this schema.
+
+## Related Projects
+
+| Project | Description |
+|---|---|
+| [radar-dash](https://github.com/duramson/radar-dash) | Sensor-agnostic HTML5 radar visualisation dashboard. Works directly with `mr60bha2d` over WebSocket. |
+| [ld2450-rs](https://github.com/duramson/ld2450-rs) | Equivalent daemon for the HLK-LD2450 24 GHz sensor — same JSON schema, position + Doppler without vital signs. |
 
 ## Wiring
 
