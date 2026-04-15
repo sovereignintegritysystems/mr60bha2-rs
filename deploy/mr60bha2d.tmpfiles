@@ -1,0 +1,2 @@
+# Create runtime directory for mr60bha2d socket
+d /run/mr60bha2 0755 root root -

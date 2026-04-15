@@ -1,0 +1,26 @@
+[Unit]
+Description=Seeed MR60BHA2 Radar Sensor Daemon
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/mr60bha2d /etc/mr60bha2d.toml
+Restart=on-failure
+RestartSec=3
+
+# Socket dir created by tmpfiles.d
+RuntimeDirectory=mr60bha2
+
+# Hardening
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+# Need access to serial device and runtime socket
+ReadWritePaths=/run/mr60bha2
+# Adjust the device path below to match your serial port
+DeviceAllow=/dev/ttyAMA0 rw
+
+[Install]
+WantedBy=multi-user.target
