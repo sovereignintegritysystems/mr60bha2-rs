@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Seeed MR60BHA2 60 GHz mmWave radar sensor streaming daemon"
+publish = false
 
 [dependencies]
 mr60bha2-proto = { path = "../mr60bha2-proto" }

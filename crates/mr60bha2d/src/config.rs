@@ -39,11 +39,11 @@ fn default_log_level() -> String {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            device:      default_device(),
-            baud_rate:   default_baud_rate(),
+            device: default_device(),
+            baud_rate: default_baud_rate(),
             socket_path: default_socket_path(),
-            window_ms:   default_window_ms(),
-            log_level:   default_log_level(),
+            window_ms: default_window_ms(),
+            log_level: default_log_level(),
         }
     }
 }

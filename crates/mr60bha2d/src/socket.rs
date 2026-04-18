@@ -12,27 +12,27 @@ use tracing::{debug, error, info, warn};
 
 #[derive(Debug, Serialize)]
 struct TargetJson {
-    x:     f32,
-    y:     f32,
+    x: f32,
+    y: f32,
     speed: f32,
-    dist:  f32,
+    dist: f32,
     angle: f32,
 }
 
 #[derive(Debug, Serialize)]
 struct VitalsJson {
-    heart_rate:   f32,
-    breath_rate:  f32,
-    heart_phase:  f32,
+    heart_rate: f32,
+    breath_rate: f32,
+    heart_phase: f32,
     breath_phase: f32,
 }
 
 #[derive(Debug, Serialize)]
 struct SnapshotJson {
-    ts:       f64,
-    targets:  Vec<TargetJson>,
+    ts: f64,
+    targets: Vec<TargetJson>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    vitals:   Option<VitalsJson>,
+    vitals: Option<VitalsJson>,
     presence: bool,
 }
 
@@ -45,13 +45,13 @@ struct SnapshotJson {
 /// emits a unified JSON snapshot on a configurable timer.
 #[derive(Debug, Default)]
 struct State {
-    targets:      Vec<TargetJson>,
-    heart_rate:   f32,
-    breath_rate:  f32,
-    heart_phase:  f32,
+    targets: Vec<TargetJson>,
+    heart_rate: f32,
+    breath_rate: f32,
+    heart_phase: f32,
     breath_phase: f32,
-    has_vitals:   bool,
-    presence:     bool,
+    has_vitals: bool,
+    presence: bool,
 }
 
 impl State {
@@ -62,12 +62,30 @@ impl State {
                     .active_targets()
                     .map(|t| {
                         // Sanitise: replace NaN/inf before JSON serialisation
-                        let x     = if t.x.is_finite() { t.x } else { 0.0 };
-                        let y     = if t.y.is_finite() { t.y } else { 0.0 };
-                        let speed = if t.speed_ms().is_finite() { t.speed_ms() } else { 0.0 };
-                        let dist  = if t.dist_m().is_finite() { t.dist_m() } else { 0.0 };
-                        let angle = if t.angle_deg().is_finite() { t.angle_deg() } else { 0.0 };
-                        TargetJson { x, y, speed, dist, angle }
+                        let x = if t.x.is_finite() { t.x } else { 0.0 };
+                        let y = if t.y.is_finite() { t.y } else { 0.0 };
+                        let speed = if t.speed_ms().is_finite() {
+                            t.speed_ms()
+                        } else {
+                            0.0
+                        };
+                        let dist = if t.dist_m().is_finite() {
+                            t.dist_m()
+                        } else {
+                            0.0
+                        };
+                        let angle = if t.angle_deg().is_finite() {
+                            t.angle_deg()
+                        } else {
+                            0.0
+                        };
+                        TargetJson {
+                            x,
+                            y,
+                            speed,
+                            dist,
+                            angle,
+                        }
                     })
                     .collect();
             }
@@ -79,9 +97,21 @@ impl State {
                 self.heart_rate = if bpm.is_finite() { bpm } else { 0.0 };
                 self.has_vitals = true;
             }
-            ParseEvent::HeartBreathPhase { total_phase: _, breath_phase, heart_phase } => {
-                self.breath_phase = if breath_phase.is_finite() { breath_phase } else { 0.0 };
-                self.heart_phase  = if heart_phase.is_finite()  { heart_phase  } else { 0.0 };
+            ParseEvent::HeartBreathPhase {
+                total_phase: _,
+                breath_phase,
+                heart_phase,
+            } => {
+                self.breath_phase = if breath_phase.is_finite() {
+                    breath_phase
+                } else {
+                    0.0
+                };
+                self.heart_phase = if heart_phase.is_finite() {
+                    heart_phase
+                } else {
+                    0.0
+                };
                 self.has_vitals = true;
             }
             ParseEvent::HumanDetected(v) => {
@@ -101,9 +131,9 @@ impl State {
 
         let vitals = if self.has_vitals {
             Some(VitalsJson {
-                heart_rate:   self.heart_rate,
-                breath_rate:  self.breath_rate,
-                heart_phase:  self.heart_phase,
+                heart_rate: self.heart_rate,
+                breath_rate: self.breath_rate,
+                heart_phase: self.heart_phase,
                 breath_phase: self.breath_phase,
             })
         } else {
@@ -112,9 +142,17 @@ impl State {
 
         let snap = SnapshotJson {
             ts,
-            targets: self.targets.iter().map(|t| TargetJson {
-                x: t.x, y: t.y, speed: t.speed, dist: t.dist, angle: t.angle,
-            }).collect(),
+            targets: self
+                .targets
+                .iter()
+                .map(|t| TargetJson {
+                    x: t.x,
+                    y: t.y,
+                    speed: t.speed,
+                    dist: t.dist,
+                    angle: t.angle,
+                })
+                .collect(),
             vitals,
             presence: self.presence,
         };
@@ -153,12 +191,12 @@ pub async fn run(
     let (snap_tx, _) = broadcast::channel::<Arc<[u8]>>(16);
 
     // Aggregation task: collects ParseEvents, emits snapshots on a timer.
-    let snap_tx2    = snap_tx.clone();
-    let mut events  = events_tx.subscribe();
-    let window      = Duration::from_millis(window_ms);
+    let snap_tx2 = snap_tx.clone();
+    let mut events = events_tx.subscribe();
+    let window = Duration::from_millis(window_ms);
     tokio::spawn(async move {
         let mut state = State::default();
-        let mut tick  = tokio::time::interval(window);
+        let mut tick = tokio::time::interval(window);
         tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
         loop {
@@ -196,10 +234,7 @@ pub async fn run(
     }
 }
 
-async fn handle_client(
-    mut stream: tokio::net::UnixStream,
-    mut rx: broadcast::Receiver<Arc<[u8]>>,
-) {
+async fn handle_client(mut stream: tokio::net::UnixStream, mut rx: broadcast::Receiver<Arc<[u8]>>) {
     loop {
         match rx.recv().await {
             Ok(line) => {

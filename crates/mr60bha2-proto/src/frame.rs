@@ -115,8 +115,7 @@ impl FrameParser {
 
                 // All 7 post-SOF header bytes collected.
                 // Validate HEAD_CKSUM = ~(XOR of SOF + header[0..6]).
-                let raw_xor = self.header[..6].iter()
-                    .fold(SOF, |acc, &b| acc ^ b);
+                let raw_xor = self.header[..6].iter().fold(SOF, |acc, &b| acc ^ b);
                 if self.header[6] != !raw_xor {
                     self.state = State::SearchSof;
                     return None;
@@ -149,7 +148,9 @@ impl FrameParser {
                 if remaining == 1 {
                     self.state = State::ReadDataCksum;
                 } else {
-                    self.state = State::ReadData { remaining: remaining - 1 };
+                    self.state = State::ReadData {
+                        remaining: remaining - 1,
+                    };
                 }
                 None
             }
@@ -188,9 +189,9 @@ impl FrameParser {
             0x0A08 => ParseEvent::PointCloudDetection(PointCloudFrame::from_bytes(data)),
 
             0x0A13 if data.len() >= 12 => ParseEvent::HeartBreathPhase {
-                total_phase:  le_f32(&data[0..]),
+                total_phase: le_f32(&data[0..]),
                 breath_phase: le_f32(&data[4..]),
-                heart_phase:  le_f32(&data[8..]),
+                heart_phase: le_f32(&data[8..]),
             },
 
             0x0A14 if data.len() >= 4 => ParseEvent::BreathRate(le_f32(data)),
@@ -240,13 +241,14 @@ fn le_u32(b: &[u8]) -> u32 {
 fn build_frame(frame_type: u16, data: &[u8]) -> Vec<u8> {
     let id: [u8; 2] = [0x80, 0x00];
     let len = (data.len() as u16).to_be_bytes();
-    let ft  = frame_type.to_be_bytes();
+    let ft = frame_type.to_be_bytes();
 
     let head_xor = [SOF, id[0], id[1], len[0], len[1], ft[0], ft[1]]
-        .iter().fold(0u8, |acc, &b| acc ^ b);
+        .iter()
+        .fold(0u8, |acc, &b| acc ^ b);
     let head_cksum = !head_xor;
 
-    let data_xor   = data.iter().fold(0u8, |acc, &b| acc ^ b);
+    let data_xor = data.iter().fold(0u8, |acc, &b| acc ^ b);
     let data_cksum = !data_xor;
 
     let mut frame = vec![SOF];
@@ -268,7 +270,7 @@ mod tests {
     #[test]
     fn parse_breath_rate() {
         let data = 16.5f32.to_le_bytes();
-        let raw  = build_frame(0x0A14, &data);
+        let raw = build_frame(0x0A14, &data);
 
         let mut p = FrameParser::new();
         let events = p.feed_slice(&raw);
@@ -281,7 +283,7 @@ mod tests {
     #[test]
     fn parse_heart_rate() {
         let data = 72.0f32.to_le_bytes();
-        let raw  = build_frame(0x0A15, &data);
+        let raw = build_frame(0x0A15, &data);
 
         let mut p = FrameParser::new();
         let events = p.feed_slice(&raw);
@@ -303,10 +305,14 @@ mod tests {
         let events = p.feed_slice(&raw);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            ParseEvent::HeartBreathPhase { total_phase, breath_phase, heart_phase } => {
-                assert!((total_phase  - 1.0).abs() < 1e-5);
+            ParseEvent::HeartBreathPhase {
+                total_phase,
+                breath_phase,
+                heart_phase,
+            } => {
+                assert!((total_phase - 1.0).abs() < 1e-5);
                 assert!((breath_phase - 0.5).abs() < 1e-5);
-                assert!((heart_phase  - 2.1).abs() < 1e-5);
+                assert!((heart_phase - 2.1).abs() < 1e-5);
             }
             _ => panic!("wrong event"),
         }
@@ -335,7 +341,7 @@ mod tests {
     #[test]
     fn parse_distance_valid() {
         let mut data = [0u8; 8];
-        data[0..4].copy_from_slice(&1u32.to_le_bytes());    // range_flag=1 → valid
+        data[0..4].copy_from_slice(&1u32.to_le_bytes()); // range_flag=1 → valid
         data[4..8].copy_from_slice(&1.23f32.to_le_bytes()); // 1.23 m
         let raw = build_frame(0x0A16, &data);
 
@@ -383,7 +389,7 @@ mod tests {
     fn parse_point_cloud_empty() {
         // count=0 → no target data
         let data = 0u32.to_le_bytes();
-        let raw  = build_frame(0x0A04, &data);
+        let raw = build_frame(0x0A04, &data);
 
         let mut p = FrameParser::new();
         let events = p.feed_slice(&raw);
@@ -400,7 +406,10 @@ mod tests {
         let raw = build_frame(0xBEEF, &[0xDE, 0xAD]);
         let mut p = FrameParser::new();
         let events = p.feed_slice(&raw);
-        assert!(matches!(events[0], ParseEvent::Unknown { frame_type: 0xBEEF }));
+        assert!(matches!(
+            events[0],
+            ParseEvent::Unknown { frame_type: 0xBEEF }
+        ));
     }
 
     // ── Robustness ─────────────────────────────────────────────────────────
@@ -459,7 +468,7 @@ mod tests {
     #[test]
     fn byte_by_byte_feeding() {
         let data = 16.5f32.to_le_bytes();
-        let raw  = build_frame(0x0A14, &data);
+        let raw = build_frame(0x0A14, &data);
 
         let mut p = FrameParser::new();
         let mut events = Vec::new();
@@ -481,6 +490,9 @@ mod tests {
         let events = p.feed_slice(&raw);
         assert_eq!(events.len(), 1);
         // With 0 data bytes, the 0x0F09 arm's guard `!data.is_empty()` fails → Unknown
-        assert!(matches!(events[0], ParseEvent::Unknown { frame_type: 0x0F09 }));
+        assert!(matches!(
+            events[0],
+            ParseEvent::Unknown { frame_type: 0x0F09 }
+        ));
     }
 }

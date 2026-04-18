@@ -52,9 +52,9 @@ impl Target {
     /// ```
     pub fn from_bytes(data: &[u8; 16]) -> Self {
         Self {
-            x:          f32::from_le_bytes([data[0],  data[1],  data[2],  data[3]]),
-            y:          f32::from_le_bytes([data[4],  data[5],  data[6],  data[7]]),
-            dop_index:  i32::from_le_bytes([data[8],  data[9],  data[10], data[11]]),
+            x: f32::from_le_bytes([data[0], data[1], data[2], data[3]]),
+            y: f32::from_le_bytes([data[4], data[5], data[6], data[7]]),
+            dop_index: i32::from_le_bytes([data[8], data[9], data[10], data[11]]),
             cluster_id: i32::from_le_bytes([data[12], data[13], data[14], data[15]]),
         }
     }
@@ -75,7 +75,9 @@ pub struct PointCloudFrame {
 impl PointCloudFrame {
     /// Iterator over the valid (non-empty) targets in this frame.
     pub fn active_targets(&self) -> impl Iterator<Item = &Target> {
-        self.targets[..self.count as usize].iter().filter(|t| t.is_valid())
+        self.targets[..self.count as usize]
+            .iter()
+            .filter(|t| t.is_valid())
     }
 
     /// Parse from the data section of a point cloud frame.
@@ -88,13 +90,13 @@ impl PointCloudFrame {
         let n = u32::from_le_bytes([data[0], data[1], data[2], data[3]]) as usize;
         let count = n.min(3) as u8;
         let mut targets = [Target::default(); 3];
-        for i in 0..count as usize {
+        for (i, target) in targets.iter_mut().enumerate().take(count as usize) {
             let start = 4 + i * 16;
             if start + 16 > data.len() {
                 break;
             }
             let slice: &[u8; 16] = data[start..start + 16].try_into().unwrap();
-            targets[i] = Target::from_bytes(slice);
+            *target = Target::from_bytes(slice);
         }
         PointCloudFrame { targets, count }
     }

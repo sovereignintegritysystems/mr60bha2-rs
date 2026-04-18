@@ -63,7 +63,7 @@ for &byte in uart_data {
 Frames use a binary framing with a 9-byte header:
 
 ```
-SOF (1)  │ 0x53
+SOF (1)  │ 0x01
 Header   │ ID(2 BE) + LEN(2 BE) + TYPE(2 BE) + HEAD_CKSUM(1) + DATA_CKSUM(1)
 Data     │ LEN bytes, little-endian payload
 ```
